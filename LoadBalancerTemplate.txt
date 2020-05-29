@@ -1,0 +1,78 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "LoadBalancer",
+    "Parameters": {
+        "VPC": {
+            "Description": " Loadbalancer located in this Vpc ",
+            "Type": "String"
+        },
+        "PublicSubnet1Id" : {
+          "Description" : " Autoscaling is located in this subnet",
+          "Type": "String"
+          },
+         "PublicSubnet2Id" : {
+          "Description" : " Autoscaling is located in this subnet",
+          "Type": "String"
+          }
+          
+    },
+    "Resources" : {
+    "ApplicationLoadBalancer" : {
+      "Type" : "AWS::ElasticLoadBalancingV2::LoadBalancer",
+      "Properties" : {
+        "Subnets" : [ { "Ref" : "PublicSubnet1Id" } , { "Ref" : "PublicSubnet2Id"} ]
+      }
+    },
+    "ALBListener" : {
+      "Type" : "AWS::ElasticLoadBalancingV2::Listener",
+      "Properties" : {
+        "DefaultActions" : [{
+          "Type" : "forward",
+          "TargetGroupArn" : { "Ref" : "ALBTargetGroup" }
+        }],
+      "LoadBalancerArn" : { "Ref" : "ApplicationLoadBalancer" },
+      "Port" : "80",
+      "Protocol" : "HTTP"
+      }
+    },
+    "ALBTargetGroup" : {
+      "Type" : "AWS::ElasticLoadBalancingV2::TargetGroup",
+      "Properties" : {
+        "HealthCheckIntervalSeconds" : 30,
+        "HealthCheckTimeoutSeconds" : 5,
+        "HealthyThresholdCount" : 3,
+        "Port" : 80,
+        "Protocol" : "HTTP",
+        "UnhealthyThresholdCount" : 5,
+        "VpcId" : {"Ref" : "VPC"},
+        "TargetType" : "instance"
+      }
+    },
+    "LoadBalancerSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Enable HTTP access on port 80",
+        "VpcId" : { "Ref" : "VPC" },
+        "SecurityGroupIngress" : [ {
+          "IpProtocol" : "-1",
+          "CidrIp" : "0.0.0.0/0"
+        } ],
+        "SecurityGroupEgress" : [ {
+          "IpProtocol" : "-1",
+          "CidrIp" : "0.0.0.0/0"
+        } ]
+      }
+    }
+  },
+
+  "Outputs" : {
+    "URLOfLoadBalancer" : {
+      "Description" : "URL of the website or Loadbalancer",
+      "Value" :  { "Fn::Join" : [ "", [ "http://", { "Fn::GetAtt" : [ "ApplicationLoadBalancer", "DNSName" ]}]]}
+    },
+    "TargetGroupARNs" : {
+      "Description" : "URL of the website or Loadbalancer",
+      "Value" :  { "Fn::Join" : [ ":", [  { "Ref" : "ALBTargetGroup" }  ] ] }
+    }
+  }
+}

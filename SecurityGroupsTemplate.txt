@@ -1,0 +1,107 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "My Security Groups",
+    "Parameters": {
+     "SSHLocation" : {
+          "Description" : " The IP address range that can be used to SSH to the EC2 instances",
+          "Type": "String"
+          },
+     "VpcId" : {
+          "Description" : " Id of Vpc",
+          "Type": "AWS::EC2::VPC::Id"
+          },
+     "Type" : {
+          "Description" : " Type of Security Group",
+          "Type": "String"
+          },
+      "GroupId" : {
+          "Description" : " Security GroupId of Public Subnet",
+          "Type": "String"
+          }    
+    },
+     "Conditions" : {
+    "PublicSecurityGroup" : { "Fn::Equals" : [ {"Ref" : "Type"}, "Public"] },
+    "PrivateSecurityGroup" : { "Fn::Equals" : [ {"Ref" : "Type"}, "Private"] }
+      },
+    "Resources": {
+        "SecurityGroupOfPublicSubnetEC2": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Condition" : "PublicSecurityGroup",
+            "Properties": {
+                "GroupDescription": "Security Group of Public Subnet",
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "CidrIp": { "Ref" : "SSHLocation"}
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "443",
+                        "ToPort": "443",
+                        "CidrIp": { "Ref" : "SSHLocation"}
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "8080",
+                        "ToPort": "8080",
+                        "CidrIp": { "Ref" : "SSHLocation"}
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
+                        "CidrIp": { "Ref" : "SSHLocation"}
+                    }
+                    
+                ],
+                "SecurityGroupEgress": [
+                    {
+                          "IpProtocol": "-1",
+                          "CidrIp": "0.0.0.0/0"
+                    }
+                                       ],
+                "VpcId": {
+                    "Ref": "VpcId"
+                },
+                 "Tags" : [ {"Key" : "Name", "Value" : "SGOfPublicSubnetEC2" } ]
+            }
+        },
+        "SecurityGroupOfPrivateSubnetEC2": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Condition" : "PrivateSecurityGroup",
+            "Properties": {
+                "GroupDescription": "Enable SSH access via port 22",
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "-1",
+                        "SourceSecurityGroupId": { "Ref": "GroupId" }
+                    }
+                ],
+                "SecurityGroupEgress": [
+                    {
+                        "IpProtocol": "-1",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "VpcId"
+                },
+                "Tags" : [ {"Key" : "Name", "Value" : "SGOfPrivateSubnetEc2" } ]
+            }
+        }
+    },
+    "Outputs": {
+     "PublicSGGroupId" : {
+         "Description" : "GroupId of Public Security Group",
+         "Value" : { "Fn::GetAtt" : [ "SecurityGroupOfPublicSubnetEC2", "GroupId" ] },
+         "Condition" : "PublicSecurityGroup"
+    },
+     "PrivateSGGroupId" : {
+         "Description" : "GroupId of Private Security Group",
+         "Value" : { "Fn::GetAtt" : [ "SecurityGroupOfPrivateSubnetEC2", "GroupId" ] },
+         "Condition" : "PrivateSecurityGroup"
+    }
+    }
+}
